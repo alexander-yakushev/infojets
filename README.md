@@ -19,5 +19,5 @@ Conscience depends on the following projects:
 Place all files in the ~/.config/awesome/infojets/ folder. Then add
 this line to the rc.lua file:
 
-    `infojets = require("infojets")`
+     infojets = require("infojets")
 
