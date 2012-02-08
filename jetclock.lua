@@ -334,7 +334,7 @@ function create_weather_callback(w)
             if i == 1 then
                _, _, temp, desc =
                   string.find(l, string.format("%s,(%s),%s,%s,(%s),.*", m, m, m, m, m))
-               w.weather.today = { cond = desc, temp = temp }
+               w.weather.today = { cond = desc or "", temp = temp or ""}
                w.weather.forecast = {}
             elseif i >= 3 then
                _, _, month, day, tempx, temp, desc =
