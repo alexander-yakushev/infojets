@@ -181,7 +181,7 @@ function update(w, filename, toggle_unread)
    if filedata.ignore then
       request = request .. ' | grep -v -E "' .. filedata.ignore[1]
       for i = 2, #filedata.ignore do
-         request = requrest .. "|" .. filedata.ignore[i]
+         request = request .. "|" .. filedata.ignore[i]
       end
       request = request .. '"'
    end
