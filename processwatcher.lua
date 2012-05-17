@@ -16,16 +16,19 @@ local util = require("infojets.util")
 local layout = require("infojets.layout.flex")
 local terminal = terminal or "xterm"
 local pango = util.pango
-local log = require("log")
+local log = require("gears.debug")
+local tostring = tostring
 
 module("infojets.processwatcher")
 
 default = {}
 default.max_line_count = 100
 
+local menu = nil
+
 function set_process_sorters(w, sorters)
    for _, s in ipairs(sorters) do
-      local req = 'ps -eo comm,pcpu,pmem --sort ' .. s.sort_by
+      local req = 'ps -eo pid,comm,pcpu,pmem --sort ' .. s.sort_by
       table.insert(w.source_files, { name = s.name,
                                      request = req,
                                      ignore = s.ignore })
@@ -62,6 +65,16 @@ function init_widgets(w)
                                             w:refresh()
                                          end))
 
+   local menu_click = awful.button({ }, 1, function()
+                                              if menu then
+                                                 menu:hide()
+                                                 menu = nil
+                                              else
+                                                 menu = w:create_kill_menu()
+                                                 menu:toggle()
+                                              end
+                                           end)
+
    local right_click = awful.button({ }, 3, function()
                                                w:show_in_terminal()
                                             end)
@@ -80,7 +93,7 @@ function init_widgets(w)
    end
 
    local log_textbox = wibox.widget.textbox()
-   log_textbox:buttons(join(mouse_wheel, right_click))
+   log_textbox:buttons(join(mouse_wheel, right_click, menu_click))
    log_textbox:set_valign("top")
    log_textbox:set_align("right")
    ui.log_textbox = log_textbox
@@ -97,7 +110,7 @@ function new()
    w.source_files = {}
    w.data = {}
    w.max_line_count = default.max_line_count
-   w.current_file = 1
+   w.current_file = default.current_file or 1
    w.line_count = 5
    w.font = 'sans 8'
    w.title_font = 'sans 8'
@@ -116,6 +129,7 @@ function new()
    w.calculate_line_count = calculate_line_count
    w.show_in_terminal = show_in_terminal
    w.current_filedata = current_filedata
+   w.create_kill_menu = create_kill_menu
    return w
 end
 
@@ -203,6 +217,8 @@ function get_result_string(w)
       local res = data[i]
       local l, seen = res[1], res[2]
 
+      _, _, l = string.find(l, "%d+ (.+)")
+
       if #l > w.line_length then
          l = string.sub(l, 1, w.line_length - 3) .. "..."
       end
@@ -214,6 +230,21 @@ function get_result_string(w)
    end
 
    return log_text
+end
+
+function create_kill_menu(w)
+   local data = w:get_last_lines(w.current_file)
+   local items = {}
+
+   for i = 1, data.count do
+      local res = data[i]
+      local _, _, pid, name = string.find(res[1], "(%d+) ([^ ]+) ")
+      table.insert(items, { name, function()
+                                     awful.util.spawn("kill -9 " .. pid, false)
+                                  end})
+   end
+
+   return awful.menu( { items = items, theme = { width = 150 } } )
 end
 
 function show_in_terminal(w)

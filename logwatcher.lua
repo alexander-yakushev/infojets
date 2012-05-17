@@ -143,12 +143,12 @@ function run(w)
                          ignore = f.ignore }
    end
 
-   local command = string.format("while fchanged=`inotifywait -q -e modify " ..
-                                 "--format 'infojets.logwatcher.notify_changed(%s, \"%%w\")' %s`; " ..
+   local command = string.format("while fchanged=\"`inotifywait -q -e modify " ..
+                                 "--format \\\"infojets.logwatcher.notify_changed(%s, '%%w')\\\" %s`\"; " ..
                                  "do echo $fchanged | %s; done",
                               w.id, files, aclient_bin)
 
-   awful.util.spawn('bash -c "' .. string.gsub(command, '"', '\\"') .. '"')
+   awful.util.spawn("bash -c '" .. string.gsub(command, "'", "'\\''") .. "'")
    w:init_widgets()
 
    for _, f in ipairs(w.log_files) do

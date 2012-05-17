@@ -1,5 +1,5 @@
 -- Infojets widget library
--- Version 0.3.0
+-- Version 0.4.0
 -- Alex Yakushev <yakushev.alex@gmail.com>
 -- Licensed under WTFPLv2.
 
@@ -43,12 +43,12 @@ function reposition_wibox(wbox, args)
    end
 
    local scr = args.screen or 1
-   local scrgeom = capi.screen[scr].workarea
+   local scrgeom = capi.screen[scr].geometry --workarea
    local width = wbox.width
    local height = wbox.height
    local x = args.x or 0
    local y = args.y or 0
-   
+
    if x >= 0 then
       x = scrgeom.x + x
    else

@@ -11,7 +11,7 @@ taskbar background and on-screen widgets. It includes:
 
 Conscience depends on the following projects:
 
-* [awesome pre-4.0](http://git.naquadah.org/awesome.git)
+* [awesome pre-3.5](http://git.naquadah.org/awesome.git)
 * [asyncshell](https://gist.github.com/1466863)
 
 ## Instalation ##

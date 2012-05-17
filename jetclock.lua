@@ -18,7 +18,6 @@ local wibox = require("wibox")
 local naughty = require("naughty")
 require("asyncshell")
 local asyncshell = asyncshell
-local log = require("log")
 
 module("infojets.jetclock")
 
@@ -29,72 +28,77 @@ hand_color    = "#CCCCCCCC"
 hand_motive   = "#76eec6CC"
 text_hlight   = "#76eec6"
 text_font     = "Helvetica 11"
+text_limit    = 20
+shift_str     = "    "
+shape   = "circle"
 
-rings = {
-   decor1 = {
-      hard_value = 0.5,
-      radius = 0.76,
-      thickness = 7,
-      start_angle = -90,
-      end_angle = 90,
-      show = true
-   },
-   decor2 = {
-      hard_value = 0.5,
-      radius = 0.76,
-      thickness = 7,
-      start_angle = 90,
-      end_angle = 270,
-      show = true
-   },
-   marks = {
-      hard_value = -1,
-      sector_count = 12,
-      fill_ratio = 0.15,
-      radius = 0.7,
-      thickness = 7,
-      start_angle = 0,
-      end_angle = 360,
-      show = true
+local function init_parts()
+   rings = {
+      decor1 = {
+         hard_value = 0.5,
+         radius = 0.77,
+         thickness = 7,
+         start_angle = -90,
+         end_angle = 90,
+         show = true
+      },
+      decor2 = {
+         hard_value = 0.5,
+         radius = 0.77,
+         thickness = 7,
+         start_angle = 90,
+         end_angle = 270,
+         show = true
+      },
+      marks = {
+         hard_value = -1,
+         sector_count = 12,
+         fill_ratio = 0.15,
+         radius = 0.7,
+         thickness = 7,
+         start_angle = 0,
+         end_angle = 360,
+         show = true
+      }
    }
-}
 
-hands = {
-   hour = {
-      value = function()
-                 return tonumber(os.date("%I")) * 60 + tonumber(os.date("%M"))
-              end,
-      max = 720,
-      color  = hand_color,
-      length = 0.6,
-      width  = 5,
-      show = true
-   },
-   minute = {
-      value = "%M",
-      max = 60,
-      color  = hand_color,
-      length = 0.85,
-      width  = 3,
-      show = true
-   },
-   second = {
-      value = "%S",
-      max = 60,
-      color  = hand_color,
-      length = 0.85,
-      width  = 1,
-      show = false
-   },
-   hour_remind = {
-      value = nil,
-      max = 720,
-      color = hand_motive,
-      length = 0.6,
-      width = 5,
-      show = false
+   hands = {
+      hour = {
+         value = function()
+                    return tonumber(os.date("%I")) * 60 + tonumber(os.date("%M"))
+                 end,
+         max = 720,
+         color  = hand_color,
+         length = 0.6,
+         width  = 5,
+         show = true
+      },
+      minute = {
+         value = "%M",
+         max = 60,
+         color  = hand_color,
+         length = 0.85,
+         width  = 3,
+         show = true
+      },
+      second = {
+         value = "%S",
+         max = 60,
+         color  = hand_color,
+         length = 0.85,
+         width  = 1,
+         show = false
+      },
+      hour_remind = {
+         value = nil,
+         max = 720,
+         color = hand_motive,
+         length = 0.6,
+         width = 5,
+         show = false
+      }
    }
-}
+end
 
 function get_val(val)
    local res
@@ -120,9 +124,9 @@ function init_widgets(w)
    local ui = {}
    local clock_box = wibox.layout.fixed.vertical()
    local info_box = wibox.layout.align.horizontal()
-   
+
    local shift = wibox.widget.textbox()
-   shift:set_markup("    ")
+   shift:set_markup(shift_str)
    local clock = wibox.widget.imagebox()
    clock:set_resize(false)
 
@@ -130,7 +134,8 @@ function init_widgets(w)
    info:set_valign("top")
 
    w.weather = { today = { cond = "Really bad", temp = -30 },
-                 forecast = { { date = "05.02", cond = "Even worse", temp_min = -50, temp_max = -40 } } }
+                 forecast = { { date = "05.02", cond = "Even worse", temp_min = -50, temp_max = -40 },
+                              { date = "06.02", cond = "Worst ever", temp_min = -90, temp_max = -90 } } }
    clock_box:add(clock)
    info_box:set_left(shift)
    info_box:set_middle(info)
@@ -176,6 +181,76 @@ function draw_ring(w, cr, t, pt)
    end
 end
 
+function draw_triangle_clock(w, cr, t, pt)
+   local clock_r, xc, yc = w.geometry.radius, w.geometry.x, w.geometry.y
+
+   local stroke_length = 0.2
+   local width = 3
+
+   local c_distance, x, y, xd, yd
+
+   local angle, b_angle = 0
+
+   local from_angle =
+      function(angle)
+         if angle > 2 * math.pi then
+            angle = angle - 2 * math.pi
+         end
+         local c_distance
+         if angle <= math.pi * 2 / 3 then
+            c_distance = clock_r * math.sin(math.pi / 6) / math.sin(math.pi / 6 + angle)
+         elseif angle < math.pi * 4 / 3 then
+            c_distance = clock_r * math.sin(math.pi / 6) / math.sin(- math.pi / 2 - angle)
+         else
+            c_distance = clock_r * math.sin(math.pi / 6) / math.sin(angle - math.pi * 7 / 6)
+         end
+
+         local x = xc + c_distance * math.sin(angle)
+         local y = yc - c_distance * math.cos(angle)
+
+         return c_distance, x, y
+      end
+
+   for i = 1, 12 do
+      c_distance, x, y = from_angle(angle)
+
+      b_angle = math.pi + angle
+
+      xd = x + stroke_length * c_distance * math.sin(b_angle)
+      yd = y - stroke_length * c_distance * math.cos(b_angle)
+
+      cr:move_to(x, y)
+      cr:line_to(xd, yd)
+      cr:set_line_cap("square")
+      cr:set_line_width(width)
+      local r, g, b, a = util.color_to_r_g_b_a(ring_bg_color)
+      cr:set_source_rgba(r, g, b, a)
+      cr:stroke()
+
+      angle = angle + math.pi / 6
+   end
+
+   for _, hand in pairs(hands) do
+      if hand.show then
+         angle = get_val(hand.value) / hand.max * 2 * math.pi
+         c_distance, x, y = from_angle(angle)
+
+         b_angle = math.pi + angle
+
+         xd = x + (1 - hand.length) * c_distance * math.sin(b_angle)
+         yd = y - (1 - hand.length) * c_distance * math.cos(b_angle)
+
+         cr:move_to(xd, yd)
+         cr:line_to(xc, yc)
+         cr:set_line_cap("round")
+         cr:set_line_width(hand.width)
+         local r, g, b, a = util.color_to_r_g_b_a(hand.color)
+         cr:set_source_rgba(r, g, b, a)
+         cr:stroke()
+      end
+   end
+end
+
 function draw_clock_hand(w, cr, hand)
    local clock_r, xc, yc = w.geometry.radius, w.geometry.x, w.geometry.y
    local secs, mins, hours, secs_arc, mins_arc, hours_arc
@@ -195,11 +270,14 @@ function draw_clock_hand(w, cr, hand)
    cr:stroke()
 end
 
-function new()
+function new(width, height, info_height, radius)
+   init_parts()
    local w = {}
 
    w.geometry = { radius = 100,
-                  x = 100, y = 100 }
+                  x = width / 2, y = height / 2,
+                  clock_width = width, clock_height = height,
+                  info_height = info_height, radius = radius }
    init_widgets(w)
 
    w.weather_bin = "weatherfc"
@@ -207,7 +285,7 @@ function new()
    w.draw = draw
    w.draw_ring = draw_ring
    w.draw_clock_hand = draw_clock_hand
-   w.set_radius = set_radius
+   w.set_sizes = set_sizes
    w.run = run
    w.remind = remind
    w.notify_reminder = notify_reminder
@@ -215,10 +293,20 @@ function new()
    return w
 end
 
+local function cut_limit(s)
+   if not s then
+      return s
+   end
+   if #s > text_limit then
+      return string.sub(s, 1, text_limit)
+   end
+   return s
+end
+
 function draw(w)
    now_draw = not now_draw
-   local cs = oocairo.image_surface_create("argb32", w.geometry.radius * 2,
-                                           w.geometry.radius * 2)
+   local cs = oocairo.image_surface_create("argb32", w.geometry.clock_width,
+                                           w.geometry.clock_height)
    local cr = oocairo.context_create(cs)
 
    -- Check if reminder is due
@@ -231,23 +319,26 @@ function draw(w)
       end
    end
 
-   -- Draw rings
-   for _, v in pairs(rings) do
-      if v.show then
-         if v.hard_value then
-            pct = v.hard_value
-         else
-            pct = get_val(v.value) / v.max
+   if shape == "circle" then
+      -- Draw rings
+      for _, v in pairs(rings) do
+         if v.show then
+            if v.hard_value then
+               pct = v.hard_value
+            else
+               pct = get_val(v.value) / v.max
+            end
+            w:draw_ring(cr, pct, v)
          end
-         w:draw_ring(cr, pct, v)
       end
-   end
-
-   -- Draw hands
-   for _, v in pairs(hands) do
-      if v.show then
-         w:draw_clock_hand(cr, v)
+      -- Draw hands
+      for _, v in pairs(hands) do
+         if v.show then
+            w:draw_clock_hand(cr, v)
+         end
       end
+   else
+      draw_triangle_clock(w, cr)
    end
 
    -- Update info
@@ -257,19 +348,20 @@ function draw(w)
       text = text .. string.format("%s %s (%s°C)\n",
                                    util.pango("Today:\t",
                                               { foreground = text_hlight }),
-                                   w.weather.today.cond, w.weather.today.temp)
+                                   cut_limit(w.weather.today.cond),
+                                   w.weather.today.temp)
       if w.weather.forecast then
          for _, v in ipairs(w.weather.forecast) do
-            text = text .. string.format("%s %s (%s°C - %s°C)\n",
+            text = text .. string.format("%s %s (%s/%s°C)\n",
                                          util.pango(v.date .. ":\t",
                                                     { foreground = text_hlight }),
-                                         v.cond, v.temp_min, v.temp_max)
+                                         cut_limit(v.cond), v.temp_min, v.temp_max)
          end
       end
    end
 
    if w.reminder then
-      text = text .. string.format("\n%s\t %s",
+      text = text .. string.format("%s\t %s",
                                    util.pango(string.format("%s:%s", prepend_zero(w.reminder.hour),
                                                             prepend_zero(w.reminder.minute)),
                                               { foreground = text_hlight }),
@@ -288,10 +380,10 @@ function run(w)
                      end, 600)
 end
 
-function set_radius(w, new_radius)
+function set_sizes(w, new_radius, new_width, new_height)
    w.geometry = { radius = new_radius,
-                  x = new_radius,
-                  y = new_radius }
+                  x = new_width / 2,
+                  y = new_height / 2 }
 end
 
 function remind(w, when, what)
