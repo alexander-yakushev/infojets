@@ -6,6 +6,7 @@ taskbar background and on-screen widgets. It includes:
 * Log watcher widget
 * Process watcher widget
 * Clock widget
+* RSS reader widget (depends on [lua-feedparser](https://github.com/slact/lua-feedparser))
 
 ## Dependencies ##
 
